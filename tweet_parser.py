@@ -48,8 +48,12 @@ def loadTweets(tweets_json_path='data/stream_test.txt'):
             continue
     return tweets_json
 
-def tweetsToPD(tweets_json):
+def tweetsToDF(tweets_json):
     tweets_df = pandas.DataFrame()
+    #cast id to a string, or else it truncates it into a 17 digit float
+    tweets_df['id'] = map(lambda tweet: str(tweet['id'])\
+                        if 'id' in tweet.keys()\
+                        else None, tweets_json)
     tweets_df['text'] = map(lambda tweet: tweet['text']\
                          if 'text' in tweet.keys()\
                         else None, tweets_json)
@@ -58,6 +62,23 @@ def tweetsToPD(tweets_json):
     tweets_df['country'] = map(lambda tweet: tweet['place']['country'] \
                         if 'place' in tweet.keys() and tweet['place'] != None\
                          else None, tweets_json)
+    return tweets_df
+
+def getGeoInfo(tweets_json):
+    "try to get all location predictors"
+    tweets_df = pandas.DataFrame()
+    tweets_df['id'] = map(lambda tweet: str(tweet['id'])\
+                        if 'id' in tweet.keys()\
+                        else None, tweets_json)
+    tweets_df['time_zone'] = map(lambda tweet: tweet['user']['time_zone']\
+                                if 'user' in tweet.keys() else None, tweets_json)
+    tweets_df['lang'] = map(lambda tweet: tweet['lang']\
+                        if 'lang' in tweet.keys() else None, tweets_json)
+    tweets_df['country'] = map(lambda tweet: tweet['place']['country'] \
+                        if 'place' in tweet.keys() and tweet['place'] != None\
+                         else None, tweets_json)
+    tweets_df['location'] = map(lambda tweet: tweet['user']['location'] \
+                        if 'user' in tweet.keys() else None, tweets_json)
     return tweets_df
 
 def plotByLang(tweets_df):
@@ -71,6 +92,7 @@ def plotByLang(tweets_df):
     ax.set_title('Top 5 languages', fontsize=15, fontweight='bold')
     tweets_by_lang[:5].plot(ax=ax, kind='bar', color='red')
     plt.savefig('figs/tweets_by_lang.png')
+
 
 
 def plotByCountry(tweets_df):
