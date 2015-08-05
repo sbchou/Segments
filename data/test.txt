@@ -1,0 +1,84 @@
+The New York Times
+        Total articles to date 47,184
+        Total authors to date 3,864
+        Total articles yesterday 123
+        Weekly trend: ▅▅▆▆▇▅▃
+        Monthly trend: ▃▃▅▆▅▆▇▅▃▅▆▅▆▇▅▃▅▆▅▅▇▅▃▅▅▆▆▇▅▃
+
+The Wall Street Journal
+        Total articles to date 23,812
+        Total authors to date 2,726
+        Total articles yesterday 31
+        Weekly trend: ▃▇▇▇▃▃▂
+        Monthly trend: ▁▁▁▁▁▁▁▁▁▁▂▅▃▁▁▁▁▁▂▃▃▁▁▃▇▇▇▃▃▂
+
+CNN Online News
+        Total articles to date 43,191
+        Total authors to date 2,379
+        Total articles yesterday 61
+        Weekly trend: ▅▇▇▇▇▅▃
+        Monthly trend: ▃▃▅▆▆▇▇▅▃▅▆▇▆▇▅▃▅▇▇▇▇▅▃▅▆▇▆▆▅▃
+Fox Online News
+        Total articles to date 71,756
+        Total authors to date 1,063
+        Total articles yesterday 332
+        Weekly trend: ▆▇▇▇▇▅▅
+        Monthly trend: ▃▃▃▅▅▆▆▃▃▅▆▅▃▅▃▃▅▅▆▇▇▅▅▆▇▇▇▇▅▅
+
+The Huffington Post (All)
+        Total articles to date 74,416
+        Total authors to date 11,620
+        Total articles yesterday 83
+        Weekly trend: ▃▆▇▆▇▅▂
+        Monthly trend: ▂▂▃▇▇▆▆▅▂▃▇▆▆▅▅▂▃▆▆▆▆▅▂▃▆▇▆▇▅▂
+Buzzfeed (All)
+        Total articles to date 35,377
+        Total authors to date 1,578
+        Total articles yesterday 82
+        Weekly trend: ▅▇▇▆▇▅▂
+        Monthly trend: ▃▂▃▇▆▇▇▅▃▅▇▇▆▇▅▂▅▇▇▇▇▅▃▅▇▇▆▆▅▂
+
+NPR Online
+        Total articles to date 15,642
+        Total authors to date 1,006
+        Total articles yesterday 59
+        Weekly trend: ▅▆▆▇▇▇▃
+        Monthly trend: ▅▃▃▆▆▇▇▆▃▃▇▆▆▆▇▃▃▆▆▇▇▆▃▅▆▆▇▇▇▃
+
+Politico
+        Total articles to date 2,399
+        Total authors to date 450
+        Total articles yesterday 10
+        Weekly trend: ▅▇▆▆▆▃▂
+        Monthly trend: ▂▂▅▅▆▇▆▃▂▅▇▆▇▇▂▂▅▇▇▆▆▃▂▅▇▆▆▆▃▂
+The Washington Post
+        Total articles to date 8,930
+        Total authors to date 653
+        Total articles yesterday 81
+        Weekly trend: ▅▇▆▇▇▅▂
+        Monthly trend: ▃▂▅▆▆▇▇▅▂▅▆▇▅▅▂▁▃▆▆▆▆▅▂▅▆▆▇▆▃▂
+
+Reuters
+        Total articles to date 14,846
+        Total authors to date 765
+        Total articles yesterday 133
+        Weekly trend: ▃▃▅▆▇▃▂
+        Monthly trend: ▁▁▁▁▁▁▁▁▂▅▆▆▃▆▃▂▅▆▆▇▃▂▁▃▃▃▅▇▃▂
+
+Propublica
+        Total articles to date 44
+        Total authors to date 22
+        Total articles yesterday 1
+        Weekly trend: ▁▅▃▅▁▇▁
+        Monthly trend: ▁▁▁▂▂▂▅▂▁▂▂▂▂▂▅▁▅▅▂▁▇▂▁▁▅▂▅▁▆▁
+McClatchy
+        Total articles to date 592
+        Total authors to date 96
+        Total articles yesterday 0
+        Weekly trend: ▂▅▅▅▇▅▂
+        Monthly trend: ▂▁▂▃▅▅▅▃▁▂▇▇▅▅▅▁▃▆▆▆▇▃▂▁▅▅▅▆▅▁
+
+total stories in db 338,021
+total authors in db 26,222
+have a nice day!
+
