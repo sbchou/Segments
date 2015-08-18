@@ -1,21 +1,27 @@
 #Import the necessary methods from tweepy library
-from tweepy.streaming import StreamListener
-from tweepy import OAuthHandler
-from tweepy import Stream
+import twitter
 import json
 import pandas 
 import matplotlib.pyplot as plt
 from geopy.geocoders import GoogleV3, Nominatim
 from stream_tweets import getTweetJSON
 
+CONSUMER_KEY = 'FoM0fWB74mAbDtOMoZYZpDfY5'
+CONSUMER_SECRET = 'ErOuMyvNORMBYufZrJYYcJal4IdtAWlnncQsVtTDaxY16mV0Xi'
+ACCESS_KEY = '359150678-ifOaGTIxHl6lB99GBOQVt3VAG4h3fB5vUxph6l1O'
+ACCESS_SECRET = '3lgZ1YtZcAKMpyQ9pv5oCWda534yxPBlf92RmfuRPdo0E'
+api = twitter.Api(consumer_key=CONSUMER_KEY,
+        consumer_secret=CONSUMER_SECRET, access_token_key=ACCESS_KEY, access_token_secret=ACCESS_SECRET)
+#last 100 twts
+# stati = api.GetUserTimeline('1506671', count=100)
 class geoDF:
     def __init__(self):
         self.tweetjson = getTweetJSON()
-        self.df = getUserFeatures(self.tweetjson)
-        
-
+        self.training = getTraining() 
+        self.features = getUserFeatures(self.training)
+1
     ## DF Apply Funs ###
-    def getUserFeatures(tweets_json):
+    def getUserFeatures(training):
         "foo foo foo, bar bar bar"
         tweets_df = pandas.DataFrame()
         tweets_df['user_id'] = map(lambda tweet: str(tweet['user']['id'])\
@@ -46,7 +52,9 @@ class geoDF:
 
 
         return tweets_df
-
+        
+    def getTraining(path='data/humanizr_data/humanizr_labeled.tsv'):
+        training = pandas.DataFrame.from_csv(path, sep="\t")
 
     """
     def filterByUSA(geo_df):
