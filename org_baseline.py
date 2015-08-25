@@ -4,108 +4,61 @@ import json
 import pandas 
 import matplotlib.pyplot as plt
 from geopy.geocoders import GoogleV3, Nominatim
-from stream_tweets import getTweetJSON
+import csv
+from progressbar import ProgressBar
 
-CONSUMER_KEY = 'FoM0fWB74mAbDtOMoZYZpDfY5'
-CONSUMER_SECRET = 'ErOuMyvNORMBYufZrJYYcJal4IdtAWlnncQsVtTDaxY16mV0Xi'
-ACCESS_KEY = '359150678-ifOaGTIxHl6lB99GBOQVt3VAG4h3fB5vUxph6l1O'
-ACCESS_SECRET = '3lgZ1YtZcAKMpyQ9pv5oCWda534yxPBlf92RmfuRPdo0E'
-api = twitter.Api(consumer_key=CONSUMER_KEY,
-        consumer_secret=CONSUMER_SECRET, access_token_key=ACCESS_KEY, access_token_secret=ACCESS_SECRET)
-#last 100 twts
-# stati = api.GetUserTimeline('1506671', count=100)
-class geoDF:
-    def __init__(self):
-        self.tweetjson = getTweetJSON()
-        self.training = getTraining() 
-        self.features = getUserFeatures(self.training)
-1
-    ## DF Apply Funs ###
-    def getUserFeatures(training):
-        "foo foo foo, bar bar bar"
-        tweets_df = pandas.DataFrame()
-        tweets_df['user_id'] = map(lambda tweet: str(tweet['user']['id'])\
-                            if 'user' in tweet.keys() \
-                            else None, tweets_json)
-        tweets_df['name'] = map(lambda tweet: tweet['user']['name']\
-                            if 'user' in tweet.keys() \
-                            else None, tweets_json)
+def init_twitt():
+    CONSUMER_KEY = 'RE9RJs5c3zQ8yhLCZQCKlVglT'
+    CONSUMER_SECRET = 'iA5ElxRl9JWm4wYDntSI2UxT56Yp6SpcDkAJ40EoDvMMFnWkfK'
+    ACCESS_KEY = '359150678-DAyroyYOpYkqLiCaNIok2M9KoY2fj1C4fxBO5v6R'
+    ACCESS_SECRET = 'zhTmAekrR0hcX4yfV4mRLVx1OQZMuIikj3dTvtfzghjAZ'
+    api = twitter.Api(consumer_key=CONSUMER_KEY,
+            consumer_secret=CONSUMER_SECRET, access_token_key=ACCESS_KEY, access_token_secret=ACCESS_SECRET)
+    return api
 
-        tweets_df['verified'] = map(lambda tweet: tweet['user']['verified'] * 1\
-                                    if 'user' in tweet.keys()\
-                                    else None, tweets_json)
-        tweets_df['description'] = map(lambda tweet: tweet['user']['description']\
-                if 'user' in tweet.keys() \
-                else None, tweets_json)
+def getTraining(path='data/humanizr_data/humanizr_labeled.tsv'):
+    training = pandas.DataFrame.from_csv(path, sep="\t")
+    return training
 
-        tweets_df['followers_ct'] = map(lambda tweet: tweet['user']['followers_count'] \
-                if 'user' in tweet.keys() \
-                else None, tweets_json)
-        
-        tweets_df['friends_ct'] = map(lambda tweet: tweet['user']['friends_count']\
-                if 'user' in tweet.keys() \
-                else None, tweets_json)
+def getUserFeatures(training, api):
+    with open('data/userfeatures.csv', 'wt') as f:
+        pbar = ProgressBar()
+        writer = csv.writer(f)
+        writer.writerow(("id", "screenname", "name", "verified",\
+                "desc", "favorites_ct", "followers_ct", \
+                "friends_ct", "tweets_ct", "label"))
+        n = len(training.index)
+        for t_id in pbar(list(training.index)):  
+            try:
+                user = api.GetUser(t_id, TIMEOUT=2)
+                screenname = user.GetScreenName()
+                name = user.GetName()
+                verified = user.GetVerified()
+                description = user.GetDescription()
+                favorites_ct = user.GetFavouritesCount()
+                followers_ct = user.GetFollowersCount()
+                friends_ct = user.GetFriendsCount()
+                tweets_ct = user.GetStatusesCount()
+                writer.writerow((t_id, screenname, name, verified, \
+                        description, favorites_ct, followers_ct, \
+                        friends_ct, tweets_ct))
+                print "done", t_id
+            except Exception, e:
+                print str(e)
 
-        tweets_df['statuses_ct'] = map(lambda tweet: tweet['user']['statuses_count']\
-                if 'user' in tweet.keys() \
-                else None, tweets_json)
+def runFeatureExtract():
+    """Outputs the feature + label CSV"""
+    api = init_twitt()
+    training = getTraining()
+    getUserFeatures(training, api)
 
-
-        return tweets_df
-        
-    def getTraining(path='data/humanizr_data/humanizr_labeled.tsv'):
-        training = pandas.DataFrame.from_csv(path, sep="\t")
-
-    """
-    def filterByUSA(geo_df):
-        "Use googles geocoding API" 
-        # places with US time zone:
-        geo_df['countryUSA'] = geo_df.country.apply(lambda row: row == "United States"\
-                                                if row else None, 1)
-        geo_df['tzUSA'] = geo_df.apply(lambda row: filterTz(row.time_zone) \
-                                                if row.countryUSA == None and \
-                                                row.time_zone else None, 1)
-        geo_df['locatUSA'] = geo_df.apply(lambda row: filterLocat(row.location) \
-                                            if (row.countryUSA == None) & (row.tzUSA == None)\
-                                            and row.location else None, 1)
-
-        usa_df  = geo_df[(geo_df.countryUSA == True) | \
-                            (geo_df.tzUSA == True) | \
-                            (geo_df.locatUSA == True)]
-        return geo_df, usa_df
-        """
-    
-## Helpers ##
-def getAddress(locat):
-    #geolocat = GoogleV3()
-    geolocat = Nominatim()
-    geo = None
-    try:
-        geo = geolocat.geocode(locat)
-    except Exception as e:
-        print e
-        return None
-    if geo:
-        return geo.address
-
-def filterTz(tz):
-    """Check if timezone in USA"""
-    US_tz = ["Alaska", "Hawaii", "Pacific/Honolulu", "Pacific Time (US & Canada)",\
-            "Mountain Time (US & Canada)", "Central Time (US & Canada)",\
-            "Eastern Time (US & Canada)"]
-    return tz in US_tz
-
-def filterLocat(locat):
-    """Check if geocode in USA"""
-    geolocat = Nominatim()
-    try:
-        geo = geolocat.geocode(locat)
-        if geo:
-            return "United States" in geo.address 
-        else:
-            return None
-    except:
-        return None
+def joinLabels(LABEL_PATH='data/humanizr_data/humanizr_labeled.tsv',\
+                FEATURE_PATH='data/userfeatures.csv'):
+    labels = pandas.DataFrame.from_csv(LABEL_PATH, sep="\t")
+    features = pandas.DataFrame.from_csv('data/userfeatures.csv')
+    joined = features.join(labels)
+    joined = joined[np.isfinite(joined['type'])]
+    joined.to_csv('data/labeled_features.csv')
 
 if __name__ == '__main__':
-    pass
+    main()
