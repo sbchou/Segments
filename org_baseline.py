@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from geopy.geocoders import GoogleV3, Nominatim
 import csv
 from progressbar import ProgressBar
+import random
+from twitter import TwitterError
+import time
 
 def init_twitt():
     CONSUMER_KEY = 'RE9RJs5c3zQ8yhLCZQCKlVglT'
@@ -26,25 +29,35 @@ def getUserFeatures(training, api):
         writer = csv.writer(f)
         writer.writerow(("id", "screenname", "name", "verified",\
                 "desc", "favorites_ct", "followers_ct", \
-                "friends_ct", "tweets_ct", "label"))
+                "friends_ct", "tweets_ct"))
         n = len(training.index)
-        for t_id in pbar(list(training.index)):  
-            try:
-                user = api.GetUser(t_id, TIMEOUT=2)
-                screenname = user.GetScreenName()
-                name = user.GetName()
-                verified = user.GetVerified()
-                description = user.GetDescription()
-                favorites_ct = user.GetFavouritesCount()
-                followers_ct = user.GetFollowersCount()
-                friends_ct = user.GetFriendsCount()
-                tweets_ct = user.GetStatusesCount()
-                writer.writerow((t_id, screenname, name, verified, \
-                        description, favorites_ct, followers_ct, \
-                        friends_ct, tweets_ct))
-                print "done", t_id
-            except Exception, e:
-                print str(e)
+        ids = list(training.index)
+        random.shuffle(ids)
+        again = True
+        for t_id in pbar(ids):
+            while again == True:
+                try:
+                    user = api.GetUser(t_id)
+                    screenname = user.GetScreenName()
+                    name = user.GetName()
+                    verified = user.GetVerified()
+                    description = user.GetDescription()
+                    favorites_ct = user.GetFavouritesCount()
+                    followers_ct = user.GetFollowersCount()
+                    friends_ct = user.GetFriendsCount()
+                    tweets_ct = user.GetStatusesCount()
+                    writer.writerow([unicode(s).encode("utf-8") for s in (t_id, screenname, name, verified, \
+                            description, favorites_ct, followers_ct, \
+                            friends_ct, tweets_ct)])
+                    print "done", t_id
+                    again = False
+                except TwitterError:
+                    print t_id, "zzZZZZZz"
+                    time.sleep(5)
+                    again = True
+                except Exception, e:
+                    import pdb; pdb.set_trace()
+                    print str(e)
 
 def runFeatureExtract():
     """Outputs the feature + label CSV"""
@@ -58,7 +71,10 @@ def joinLabels(LABEL_PATH='data/humanizr_data/humanizr_labeled.tsv',\
     features = pandas.DataFrame.from_csv('data/userfeatures.csv')
     joined = features.join(labels)
     joined = joined[np.isfinite(joined['type'])]
+    joined['verified'] = joined['verified'] * 1 # binarize
     joined.to_csv('data/labeled_features.csv')
+    joined[['verified', 'favorites_ct', 'followers_ct', 'friends_ct',\
+            'tweets_ct','type']].to_csv('data/baseline_feats.csv')
 
 if __name__ == '__main__':
-    main()
+    runFeatureExtract()
