@@ -9,6 +9,8 @@ from progressbar import ProgressBar
 import random
 from twitter import TwitterError
 import time
+import numpy as np
+import sklearn
 
 def init_twitt():
     CONSUMER_KEY = 'RE9RJs5c3zQ8yhLCZQCKlVglT'
@@ -75,6 +77,29 @@ def joinLabels(LABEL_PATH='data/humanizr_data/humanizr_labeled.tsv',\
     joined.to_csv('data/labeled_features.csv')
     joined[['verified', 'favorites_ct', 'followers_ct', 'friends_ct',\
             'tweets_ct','type']].to_csv('data/baseline_feats.csv')
+
+def init_linearModel(training_path='data/lr_train.csv'):
+    """ linear regression baseline, on tiny feature set"""
+    from sklearn.linear_model import LinearRegression
+    training = pandas.DataFrame.from_csv(training_path)
+    training = training.as_matrix()
+    X = training[:, 0:5]
+    Y = training[:,5]
+    lr = LinearRegression()
+    lr.fit(X,Y)
+    return lr
+
+def evaluateModel(model, test_path='data/lr_test.csv'):
+    testing = pandas.DataFrame.from_csv(test_path)
+    testing = testing.as_matrix()
+    X_test = testing[:, 0:5]
+    Y_test = testing[:,5]
+    pred = model.predict(X_test)
+    # for linear regression they have to binarize it
+    # treats it like binary classif
+    pred = pred.round()
+    accuracy = sklearn.metrics.accuracy_score(Y_test, pred)
+    print 'Accuracy: ', round(accuracy * 100, 2), '%'
 
 if __name__ == '__main__':
     runFeatureExtract()
