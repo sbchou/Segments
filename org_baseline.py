@@ -152,7 +152,7 @@ def runUserSave():
     training = getTraining()
     saveUsers(training, api)
 
-def genTraining(label_path, feature_path, out_name):
+def genTraining(ratio, label_path, feature_path, out_name):
     labels = pandas.DataFrame.from_csv(label_path, sep="\t")
     features = pandas.DataFrame.from_csv(feature_path)
     joined = features.join(labels)
@@ -163,8 +163,8 @@ def genTraining(label_path, feature_path, out_name):
 
     subset = joined[['verified', 'favourites_count', 'followers_count', 'friends_count',\
             'statuses_count','type']]
-    subset[:int(n * .8)].to_csv(out_name + 'train.csv')
-    subset[int(n * .8):].to_csv(out_name + 'test.csv')
+    subset[:int(n * ratio)].to_csv(out_name + '_train.csv')
+    subset[int(n * ratio):].to_csv(out_name + '_test.csv')
      
  
 def init_linearModel(training_path):
@@ -196,12 +196,13 @@ if __name__ == '__main__':
     if sys.argv[1] == 'csv':
         mongo_to_CSV('data/user_feats.csv')
     if sys.argv[1] == 'data':
-        genTraining('data/humanizr_data/humanizr_labeled.tsv', \
+        genTraining(0.5, \
+            'data/humanizr_data/humanizr_labeled.tsv', \
             'data/user_feats.csv', \
             'data/linear')
     if sys.argv[1] == 'linear':
-        lr = init_linearModel('data/lr_trainr.csv')
-        evaluateModel(lr, 'data/lr_test.csv' )
+        lr = init_linearModel('data/linear_train.csv')
+        evaluateModel(lr, 'data/linear_test.csv' )
 
 
 
