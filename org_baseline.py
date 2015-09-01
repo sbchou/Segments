@@ -12,6 +12,7 @@ import numpy as np
 import sklearn
 import frogress
 from pymongo import MongoClient
+import sys
 
 def init_twitt():
     CONSUMER_KEY = 'RE9RJs5c3zQ8yhLCZQCKlVglT'
@@ -67,15 +68,15 @@ def saveUsers(training, api):
                         print str(e)
                         break
 
-def mongo_to_CSV():
+def mongo_to_CSV(OUT_PATH):
     client = MongoClient('localhost', 27017)
     db = client['twitter_db']
     collection = db['tweeps']
-    with open('data/user_feats.csv', 'wt') as f:
+    with open(OUT_PATH, 'wt') as f:
         writer = csv.writer(f)
         writer.writerow(("id", "screen_name", "name", "verified",\
-                    "description", "favourites_count", "followers_ct", \
-                    "friends_ct", "tweets_ct"))
+                    "description", "favourites_count", "followers_count", \
+                    "friends_count", "statuses_count"))
         for doc in collection.find({}, \
                     {'id':1,
                     'screen_name': 1,
@@ -85,10 +86,17 @@ def mongo_to_CSV():
                     'favourites_count':1,
                     'followers_count':1,
                     'friends_count':1,
-                    'tweets_count':1}):
-            print doc['id']
-            writer.writerow([unicode(s).encode('utf-8')\
-                    for s in doc.values()])
+                    'statuses_count':1}):
+            print doc['id'] 
+            writer.writerow([unicode(doc['id']).encode('utf-8'),\
+                unicode(doc['screen_name']).encode('utf-8'),\
+                unicode(doc['name']).encode('utf-8'),\
+                unicode(doc['verified']).encode('utf-8'),\
+                unicode(doc['description']).encode('utf-8'),\
+                unicode(doc['favourites_count']).encode('utf-8'),\
+                unicode(doc['followers_count']).encode('utf-8'),\
+                unicode(doc['friends_count']).encode('utf-8'),\
+                unicode(doc['statuses_count']).encode('utf-8')])
 
 def getUserFeatures(training, api):
     with open('data/userfeatures2.csv', 'wt') as f:
@@ -144,18 +152,22 @@ def runUserSave():
     training = getTraining()
     saveUsers(training, api)
 
-def joinLabels(LABEL_PATH='data/humanizr_data/humanizr_labeled.tsv',\
-                FEATURE_PATH='data/userfeatures.csv'):
-    labels = pandas.DataFrame.from_csv(LABEL_PATH, sep="\t")
-    features = pandas.DataFrame.from_csv('data/userfeatures.csv')
+def genTraining(label_path, feature_path, out_name):
+    labels = pandas.DataFrame.from_csv(label_path, sep="\t")
+    features = pandas.DataFrame.from_csv(feature_path)
     joined = features.join(labels)
     joined = joined[np.isfinite(joined['type'])]
     joined['verified'] = joined['verified'] * 1 # binarize
-    joined.to_csv('data/labeled_features.csv')
-    joined[['verified', 'favorites_ct', 'followers_ct', 'friends_ct',\
-            'tweets_ct','type']].to_csv('data/baseline_feats.csv')
+    #split and save as train, test (4/5, 1/5)
+    n = len(joined)
 
-def init_linearModel(training_path='data/lr_train.csv'):
+    subset = joined[['verified', 'favourites_count', 'followers_count', 'friends_count',\
+            'statuses_count','type']]
+    subset[:int(n * .8)].to_csv(out_name + 'train.csv')
+    subset[int(n * .8):].to_csv(out_name + 'test.csv')
+     
+ 
+def init_linearModel(training_path):
     """ linear regression baseline, on tiny feature set"""
     from sklearn.linear_model import LinearRegression
     training = pandas.DataFrame.from_csv(training_path)
@@ -166,7 +178,7 @@ def init_linearModel(training_path='data/lr_train.csv'):
     lr.fit(X,Y)
     return lr
 
-def evaluateModel(model, test_path='data/lr_test.csv'):
+def evaluateModel(model, test_path):
     testing = pandas.DataFrame.from_csv(test_path)
     testing = testing.as_matrix()
     X_test = testing[:, 0:5]
@@ -179,6 +191,18 @@ def evaluateModel(model, test_path='data/lr_test.csv'):
     print 'Accuracy: ', round(accuracy * 100, 2), '%'
 
 if __name__ == '__main__':
-    #runFeatureExtract()
-    #runUserSave()
-    mongo_to_CSV() 
+    if sys.argv[1] == 'stream':
+        runUserSave()
+    if sys.argv[1] == 'csv':
+        mongo_to_CSV('data/user_feats.csv')
+    if sys.argv[1] == 'data':
+        genTraining('data/humanizr_data/humanizr_labeled.tsv', \
+            'data/user_feats.csv', \
+            'data/linear')
+    if sys.argv[1] == 'linear':
+        lr = init_linearModel('data/lr_trainr.csv')
+        evaluateModel(lr, 'data/lr_test.csv' )
+
+
+
+
