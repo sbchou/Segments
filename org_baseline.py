@@ -1,7 +1,7 @@
 import tweepy
 import json
 import pandas 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 from geopy.geocoders import GoogleV3, Nominatim
 import csv
 from progressbar import ProgressBar
@@ -15,8 +15,8 @@ from pymongo import MongoClient
 import sys
 
 def init_twitt():
-    CONSUMER_KEY = 'RE9RJs5c3zQ8yhLCZQCKlVglT'
-    CONSUMER_SECRET = 'iA5ElxRl9JWm4wYDntSI2UxT56Yp6SpcDkAJ40EoDvMMFnWkfK'
+    CONSUMER_KEY = "P6F9glaUd7uB3kj5ElRWRXIDm"
+    CONSUMER_SECRET = "lasmKKLlE0WzOXTe61u1s1PERsuKludoUIkY9W2XWkHf6xxbsW"
     #ACCESS_KEY = '359150678-DAyroyYOpYkqLiCaNIok2M9KoY2fj1C4fxBO5v6R'
     #ACCESS_SECRET = 'zhTmAekrR0hcX4yfV4mRLVx1OQZMuIikj3dTvtfzghjAZ'
     auth = tweepy.AppAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -24,16 +24,16 @@ def init_twitt():
     return api
 
 def init_json_api():
-    CONSUMER_KEY = 'RE9RJs5c3zQ8yhLCZQCKlVglT'
-    CONSUMER_SECRET = 'iA5ElxRl9JWm4wYDntSI2UxT56Yp6SpcDkAJ40EoDvMMFnWkfK'
+    CONSUMER_KEY = "P6F9glaUd7uB3kj5ElRWRXIDm"
+    CONSUMER_SECRET = "lasmKKLlE0WzOXTe61u1s1PERsuKludoUIkY9W2XWkHf6xxbsW"
     #ACCESS_KEY = '359150678-DAyroyYOpYkqLiCaNIok2M9KoY2fj1C4fxBO5v6R'
     #ACCESS_SECRET = 'zhTmAekrR0hcX4yfV4mRLVx1OQZMuIikj3dTvtfzghjAZ'
     auth = tweepy.AppAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
     api = tweepy.API(auth, parser = tweepy.parsers.JSONParser())
     return api
 
-def getTraining(path='data/humanizr_data/humanizr_labeled.tsv'):
-    training = pandas.DataFrame.from_csv(path, sep="\t")
+def getTraining(path):
+    training = pandas.DataFrame.from_csv(path)
     return training
 
 def saveUsers(training, api):
@@ -146,25 +146,24 @@ def runFeatureExtract():
     getUserFeatures(training, api)
 
 
-def runUserSave():
+def runUserSave(labels):
     """Outputs the feature + label CSV"""
     api = init_json_api()
-    training = getTraining()
+    training = getTraining(labels)
     saveUsers(training, api)
 
-def genTraining(ratio, label_path, feature_path, out_name):
+def genTraining(label_path, feature_path, out_name):
     labels = pandas.DataFrame.from_csv(label_path, sep="\t")
     features = pandas.DataFrame.from_csv(feature_path)
     joined = features.join(labels)
     joined = joined[np.isfinite(joined['type'])]
     joined['verified'] = joined['verified'] * 1 # binarize
     #split and save as train, test (4/5, 1/5)
-    n = len(joined)
-
+    #n = len(joined)
     subset = joined[['verified', 'favourites_count', 'followers_count', 'friends_count',\
             'statuses_count','type']]
-    subset[:int(n * ratio)].to_csv(out_name + '_train.csv')
-    subset[int(n * ratio):].to_csv(out_name + '_test.csv')
+    #subset[:int(n * ratio)].to_csv(out_name + '_train.csv')
+    subset.sort('type').to_csv(out_name)
      
  
 def init_linearModel(training_path):
@@ -178,6 +177,17 @@ def init_linearModel(training_path):
     lr.fit(X,Y)
     return lr
 
+def init_logistic(training_path):
+    """ linear regression baseline, on tiny feature set"""
+    from sklearn.linear_model import LogisticRegression
+    training = pandas.DataFrame.from_csv(training_path)
+    training = training.as_matrix()
+    X = training[:, 0:5]
+    Y = training[:,5]
+    lr = LogisticRegression()
+    lr.fit(X,Y)
+    return lr
+
 def evaluateModel(model, test_path):
     testing = pandas.DataFrame.from_csv(test_path)
     testing = testing.as_matrix()
@@ -187,23 +197,35 @@ def evaluateModel(model, test_path):
     # for linear regression they have to binarize it
     # treats it like binary classif
     pred = pred.round()
-    accuracy = sklearn.metrics.accuracy_score(Y_test, pred)
-    print 'Accuracy: ', round(accuracy * 100, 2), '%'
+    #accuracy = sklearn.metrics.accuracy_score(Y_test, pred)
+    #print 'Accuracy: ', round(accuracy * 100, 2), '%'
+    #fscore = sklearn.metrics.f1_score(Y_test, pred)
+    #print 'F1-score: ', round(fscore * 100, 2), '%'
+
+    target_names = ['Org', 'Person']
+    print(sklearn.metrics.classification_report(Y_test, pred, target_names=target_names))
+    #print 'confusion mtx'
+    #print """ 
+    #        [true pos][false neg]
+    #        [false pos][true neg]"""
+
+    #print(sklearn.metrics.confusion_matrix(Y_test, pred))
 
 if __name__ == '__main__':
     if sys.argv[1] == 'stream':
-        runUserSave()
+        runUserSave('data/humanizr_data/type1.csv')
     if sys.argv[1] == 'csv':
         mongo_to_CSV('data/user_feats.csv')
     if sys.argv[1] == 'data':
-        genTraining(0.5, \
-            'data/humanizr_data/humanizr_labeled.tsv', \
+        genTraining('data/humanizr_data/humanizr_labeled.tsv', \
             'data/user_feats.csv', \
-            'data/linear')
+            'data/linear.csv')
     if sys.argv[1] == 'linear':
         lr = init_linearModel('data/linear_train.csv')
         evaluateModel(lr, 'data/linear_test.csv' )
-
+    if sys.argv[1] == 'logit':
+        lr = init_logistic('data/linear_train.csv')
+        evaluateModel(lr, 'data/linear_test.csv' )
 
 
 
