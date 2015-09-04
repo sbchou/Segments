@@ -213,7 +213,7 @@ def evaluateModel(model, test_path):
 
 if __name__ == '__main__':
     if sys.argv[1] == 'stream':
-        runUserSave('data/humanizr_data/type1.csv')
+        runUserSave('data/humanizr_labeled:.csv')
     if sys.argv[1] == 'csv':
         mongo_to_CSV('data/user_feats.csv')
     if sys.argv[1] == 'data':
