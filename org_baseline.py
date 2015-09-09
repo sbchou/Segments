@@ -2,7 +2,6 @@ import tweepy
 import json
 import pandas 
 import matplotlib.pyplot as plt 
-from geopy.geocoders import GoogleV3, Nominatim
 import csv
 from progressbar import ProgressBar
 import random
@@ -10,7 +9,6 @@ from tweepy import TweepError
 import time
 import numpy as np
 import sklearn
-import frogress
 from pymongo import MongoClient
 import sys
 
@@ -20,20 +18,11 @@ def init_twitt():
     #ACCESS_KEY = '359150678-DAyroyYOpYkqLiCaNIok2M9KoY2fj1C4fxBO5v6R'
     #ACCESS_SECRET = 'zhTmAekrR0hcX4yfV4mRLVx1OQZMuIikj3dTvtfzghjAZ'
     auth = tweepy.AppAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
-    api = tweepy.API(auth)
-    return api
-
-def init_json_api():
-    CONSUMER_KEY = "P6F9glaUd7uB3kj5ElRWRXIDm"
-    CONSUMER_SECRET = "lasmKKLlE0WzOXTe61u1s1PERsuKludoUIkY9W2XWkHf6xxbsW"
-    #ACCESS_KEY = '359150678-DAyroyYOpYkqLiCaNIok2M9KoY2fj1C4fxBO5v6R'
-    #ACCESS_SECRET = 'zhTmAekrR0hcX4yfV4mRLVx1OQZMuIikj3dTvtfzghjAZ'
-    auth = tweepy.AppAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
-    api = tweepy.API(auth, parser = tweepy.parsers.JSONParser())
+    api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
     return api
 
 def getTraining(path):
-    training = pandas.DataFrame.from_csv(path)
+    training = pandas.DataFrame.from_csv(path, sep="\t")
     return training
 
 def saveUsers(training, api):
@@ -43,16 +32,23 @@ def saveUsers(training, api):
  
     n = len(training.index)
     ids = list(training.index) 
-    random.shuffle(ids)
+    for i in xrange(300, n, 100):
+        print i, "to", i+100
+        users = api.lookup_users(ids[i:i+100])
+        collection.insert(users)
+     
+    """
     again = True
+
     for t_id in ids: 
         if collection.find({'id': t_id}).count() > 0: 
             print "seen", t_id
         else:
             while again == True:
                 try:  
-                    user = api.get_user(t_id)
-                    collection.insert(user)
+                    user = api.lookup_users([t_id])[0]
+                    #import pdb; pdb.set_trace()
+		    collection.insert(user)
                     print "done", t_id
                     time.sleep(5)
                     break
@@ -66,8 +62,9 @@ def saveUsers(training, api):
                             continue 
                     except:
                         print str(e)
+			print 'error not limit'
                         break
-
+	"""
 def mongo_to_CSV(OUT_PATH):
     client = MongoClient('localhost', 27017)
     db = client['twitter_db']
@@ -114,7 +111,7 @@ def getUserFeatures(training, api):
             while again == True:
                 try: 
                     print t_id
-                    user = api.get_user(t_id)
+                    user = api.lookup_users([t_id])
                     screenname = user.screen_name
                     name = user.name
                     verified = user.verified
@@ -148,14 +145,15 @@ def runFeatureExtract():
 
 def runUserSave(labels):
     """Outputs the feature + label CSV"""
-    api = init_json_api()
+    api = init_twitt()
     training = getTraining(labels)
     saveUsers(training, api)
 
 def genTraining(label_path, feature_path, out_name):
-    labels = pandas.DataFrame.from_csv(label_path, sep="\t")
+    labels = pandas.DataFrame.from_csv(label_path)
+    labels.index = [str(s) for s in labels.index]
     features = pandas.DataFrame.from_csv(feature_path)
-    joined = features.join(labels)
+    joined = features.join(labels) 
     joined = joined[np.isfinite(joined['type'])]
     joined['verified'] = joined['verified'] * 1 # binarize
     #split and save as train, test (4/5, 1/5)
@@ -213,13 +211,13 @@ def evaluateModel(model, test_path):
 
 if __name__ == '__main__':
     if sys.argv[1] == 'stream':
-        runUserSave('data/humanizr_labeled:.csv')
+        runUserSave('data/humanizr_labeled.csv')
     if sys.argv[1] == 'csv':
         mongo_to_CSV('data/user_feats.csv')
     if sys.argv[1] == 'data':
-        genTraining('data/humanizr_data/humanizr_labeled.tsv', \
+        genTraining('data/humanizr_labeled.csv', \
             'data/user_feats.csv', \
-            'data/linear.csv')
+            'data/training.csv')
     if sys.argv[1] == 'linear':
         lr = init_linearModel('data/linear_train.csv')
         evaluateModel(lr, 'data/linear_test.csv' )
