@@ -149,21 +149,31 @@ def runUserSave(labels):
     training = getTraining(labels)
     saveUsers(training, api)
 
-def genTraining(label_path, feature_path, out_name):
+def balancedTraining(label_path, feature_path, out_name):
+    """
+    Generate two files, 80-20% split of training and testing (50-50 types 1/2)
+    """
     labels = pandas.DataFrame.from_csv(label_path)
     labels.index = [str(s) for s in labels.index]
     features = pandas.DataFrame.from_csv(feature_path)
     joined = features.join(labels) 
     joined = joined[np.isfinite(joined['type'])]
-    joined['verified'] = joined['verified'] * 1 # binarize
+    #import pdb; pdb.set_trace()
+    #joined['verified'] = joined['verified'] * 1 # binarize
+    joined['verified'] = joined['verified'].apply(lambda x: 1 if x==True else 0)
     #split and save as train, test (4/5, 1/5)
     #n = len(joined)
     subset = joined[['verified', 'favourites_count', 'followers_count', 'friends_count',\
             'statuses_count','type']]
     #subset[:int(n * ratio)].to_csv(out_name + '_train.csv')
-    subset.sort('type').to_csv(out_name)
-     
- 
+    #subset.sort('type').to_csv(out_name)
+    type1 = subset[subset.type == 1] 
+    type2 = subset[subset.type == 2] 
+    # type 1 is the limiting factor
+    n = len(type1)
+    pandas.concat([type1[:int(n * 0.8)], type2[:int(n * 0.8)]]).to_csv('data/balanced_training.csv')
+    pandas.concat([type1[(int(n * 0.8) + 1) :], type2[(int(n * 0.8) + 1) : n]]).to_csv('data/balanced_testing.csv')
+
 def init_linearModel(training_path):
     """ linear regression baseline, on tiny feature set"""
     from sklearn.linear_model import LinearRegression
@@ -214,16 +224,16 @@ if __name__ == '__main__':
         runUserSave('data/humanizr_labeled.csv')
     if sys.argv[1] == 'csv':
         mongo_to_CSV('data/user_feats.csv')
-    if sys.argv[1] == 'data':
-        genTraining('data/humanizr_labeled.csv', \
+    if sys.argv[1] == 'balanced':
+        balancedTraining('data/humanizr_labeled.csv', \
             'data/user_feats.csv', \
-            'data/training.csv')
+            'data/training')
     if sys.argv[1] == 'linear':
-        lr = init_linearModel('data/linear_train.csv')
-        evaluateModel(lr, 'data/linear_test.csv' )
+        lr = init_linearModel('data/train.csv')
+        evaluateModel(lr, 'data/test.csv' )
     if sys.argv[1] == 'logit':
-        lr = init_logistic('data/linear_train.csv')
-        evaluateModel(lr, 'data/linear_test.csv' )
+        lr = init_logistic('data/balanced_training.csv')
+        evaluateModel(lr, 'data/balanced_testing.csv' )
 
 
 
