@@ -22,7 +22,7 @@ def init_twitt():
     return api
 
 def getTraining(path):
-    training = pandas.DataFrame.from_csv(path, sep="\t")
+    training = pandas.DataFrame.from_csv(path)
     return training
 
 def saveUsers(training, api):
@@ -36,35 +36,38 @@ def saveUsers(training, api):
         print i, "to", i+100
         users = api.lookup_users(ids[i:i+100])
         collection.insert(users)
-     
-    """
-    again = True
 
-    for t_id in ids: 
-        if collection.find({'id': t_id}).count() > 0: 
-            print "seen", t_id
+def last_n_tweets(api, user_id, n=200):
+    """Returns a list of strings-- text only."""
+    try:
+        timeline = api.user_timeline(user_id, count=n)
+        tweets = [t['text'] for t in timeline]
+        return tweets
+    
+    except TweepError, e: 
+        if e[0][0]['code'] == 88:
+            print user_id, e, "zzZZZZZz"
+            time.sleep(900) 
+
         else:
-            while again == True:
-                try:  
-                    user = api.lookup_users([t_id])[0]
-                    #import pdb; pdb.set_trace()
-		    collection.insert(user)
-                    print "done", t_id
-                    time.sleep(5)
-                    break
+            return None 
 
-                except TweepError, e: 
-                    #import pdb; pdb.set_trace()
-                    try:
-                        if e[0][0]['code'] == 88:
-                            print t_id, e, "zzZZZZZz"
-                            time.sleep(900)
-                            continue 
-                    except:
-                        print str(e)
-			print 'error not limit'
-                        break
-	"""
+def saveTweets(api, user_ids, n=200):
+    """Get last 200 tweets per user, save in mongo"""
+    client = MongoClient('localhost', 27017)
+    db = client['twitter_db']
+    collection = db['tweets']
+    for tid in user_ids:
+        if db.tweets.find({'id': tid}):
+            tweets = last_n_tweets(api, tid, n)
+            if tweets:
+                collection.insert({'id': tid, 'tweets':tweets})
+                print tid, "done"
+            else:
+                print tid, 'no tweets'
+        else:
+            print 'already seen', tid
+ 
 def mongo_to_CSV(OUT_PATH):
     client = MongoClient('localhost', 27017)
     db = client['twitter_db']
@@ -143,11 +146,17 @@ def runFeatureExtract():
     getUserFeatures(training, api)
 
 
-def runUserSave(labels):
-    """Outputs the feature + label CSV"""
+def runUserSave(labels): 
     api = init_twitt()
     training = getTraining(labels)
     saveUsers(training, api)
+
+def runTweetsSave(labels):
+    api = init_twitt()
+    training = getTraining(labels)
+    ids = list(training.index)[166:]
+    saveTweets(api, ids)
+
 
 def balancedTraining(label_path, feature_path, out_name):
     """
@@ -157,16 +166,10 @@ def balancedTraining(label_path, feature_path, out_name):
     labels.index = [str(s) for s in labels.index]
     features = pandas.DataFrame.from_csv(feature_path)
     joined = features.join(labels) 
-    joined = joined[np.isfinite(joined['type'])]
-    #import pdb; pdb.set_trace()
-    #joined['verified'] = joined['verified'] * 1 # binarize
+    joined = joined[np.isfinite(joined['type'])] 
     joined['verified'] = joined['verified'].apply(lambda x: 1 if x==True else 0)
-    #split and save as train, test (4/5, 1/5)
-    #n = len(joined)
     subset = joined[['verified', 'favourites_count', 'followers_count', 'friends_count',\
-            'statuses_count','type']]
-    #subset[:int(n * ratio)].to_csv(out_name + '_train.csv')
-    #subset.sort('type').to_csv(out_name)
+            'statuses_count','type']] 
     type1 = subset[subset.type == 1] 
     type2 = subset[subset.type == 2] 
     # type 1 is the limiting factor
@@ -196,6 +199,33 @@ def init_logistic(training_path):
     lr.fit(X,Y)
     return lr
 
+def init_svm(training_path): 
+    from sklearn.svm import SVC
+    training = pandas.DataFrame.from_csv(training_path)
+    training = training.as_matrix()
+    X = training[:, 0:5]
+    Y = training[:,5]
+    svm = SVC(C=0.0001)
+    svm.fit(X,Y)
+    return svm
+
+"""
+training = pandas.DataFrame.from_csv('data/balanced_training.csv')
+import pandas
+from sklearn import cross_validation
+from sklearn import svm
+training = pandas.DataFrame.from_csv('data/balanced_training.csv')
+training = training.as_matrix()
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(
+training[:,0:5], training[:,5], test_size=0.2, random_state=0)
+clf = svm.SVC(C=1).fit(X_train, y_train)
+clf.score(X_test, y_test)
+scores = cross_validation.cross_val_score(
+...    clf, training[:,0:5], training[:,5], cv=5)
+
+scores = cross_validation.cross_val_score(clf, training[:,0:5], training[:,5], cv=5, scoring = 'f1_weighted')
+print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+"""
 def evaluateModel(model, test_path):
     testing = pandas.DataFrame.from_csv(test_path)
     testing = testing.as_matrix()
@@ -212,14 +242,18 @@ def evaluateModel(model, test_path):
 
     target_names = ['Org', 'Person']
     print(sklearn.metrics.classification_report(Y_test, pred, target_names=target_names))
-    #print 'confusion mtx'
-    #print """ 
-    #        [true pos][false neg]
-    #        [false pos][true neg]"""
+    print 'confusion mtx'
+    print """ 
+            [true pos][false neg]
+            [false pos][true neg]"""
 
-    #print(sklearn.metrics.confusion_matrix(Y_test, pred))
+    print(sklearn.metrics.confusion_matrix(Y_test, pred))
 
 if __name__ == '__main__':
+
+    if sys.argv[1] == 'tweets':
+        runTweetsSave('data/humanizr_labeled.csv')
+
     if sys.argv[1] == 'stream':
         runUserSave('data/humanizr_labeled.csv')
     if sys.argv[1] == 'csv':
@@ -229,11 +263,14 @@ if __name__ == '__main__':
             'data/user_feats.csv', \
             'data/training')
     if sys.argv[1] == 'linear':
-        lr = init_linearModel('data/train.csv')
-        evaluateModel(lr, 'data/test.csv' )
+        lr = init_linearModel('data/balanced_training.csv')
+        evaluateModel(lr, 'data/balanced_testing.csv' )
     if sys.argv[1] == 'logit':
         lr = init_logistic('data/balanced_training.csv')
         evaluateModel(lr, 'data/balanced_testing.csv' )
+    if sys.argv[1] == 'svm':
+        svm = init_svm('data/balanced_training.csv')
+        evaluateModel(svm, 'data/balanced_testing.csv' )
 
 
 
